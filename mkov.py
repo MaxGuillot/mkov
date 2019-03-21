@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from collections import Counter
 
+# Utilitary
 # Norming vector
 def vnorm(v):
     res = v/np.linalg.norm(v,ord=1)
@@ -24,7 +25,19 @@ def evec(n=4):
         res[n] = 1
         return res
 
+# Get log10 range
+def lrange(n = 42):
+    res = np.floor(np.log10(n))
+    return res
 
+def norm(v):
+    res = np.linalg.norm(v,ord=1)
+    if res != 0:
+        return res
+    else :
+        return 1
+
+# End utilitary
 class Grille:
     
     def __init__(self,lx=10,ly=20,zmin=0,zmax=42,dx=1,dy=1):
@@ -62,14 +75,18 @@ class Grille:
             res = np.append(res,x*x +y*x * np.random.rand())
         self.m_zval(res)
         
+    
+        
 class Mkov:
     def __init__(self,g):
         g.bord() # Compute border indexes
         self.bval = np.mean(g.zval[g.ibord])
         self.mval = np.mean(g.zval)
-        self.na0 = self.mat_t(np.mod((np.round(g.zval)),10).astype(int))
-        self.na1 = self.mat_t(np.mod((np.round(g.zval/10)),10).astype(int))
-        self.na2 = self.mat_t(np.mod((np.round(g.zval/100)),10).astype(int))
+        self.zrng = lrange(g.zmax)
+        self.lna = list()
+        for i in np.arange(self.zrng +1):
+            self.lna.append(self.mat_t(np.mod((np.round(g.zval)/10**i),10).astype(int)))           
+        
     # Naive approach
     def mat_t(self,z):
         res = np.zeros([10,10])
@@ -79,20 +96,16 @@ class Mkov:
         return res/s
     
     def pred(self,v=142):
-        res = -999
-        c = np.mod(np.round(v/100),10).astype(int)
-        c = evec(c)
-        c = np.dot(self.na2,c)/np.linalg.norm(np.dot(self.na2,c),ord=1)
-        c = np.random.choice(10,1,p=c).astype(int) * 100
-        d = np.mod(np.round(v/10),10).astype(int)
-        d = evec(d)
-        d = np.dot(self.na1,d)/np.linalg.norm(np.dot(self.na1,d),ord=1)
-        d = np.random.choice(10,1,p=d).astype(int) * 10
-        u =  np.mod(np.round(v),10).astype(int)
-        u = evec(u)
-        u = np.dot(self.na0,u)/np.linalg.norm(np.dot(self.na0,u),ord=1)
-        u = np.random.choice(10,1,p=u).astype(int)
-        res = int(c + d + u)
+        res = 0
+        for i in np.arange(self.zrng+1):
+            i = int(i)            
+            n = np.mod(np.round(v/100),10).astype(int)
+            n = evec(n)            
+            n = np.dot(self.lna[i],n)/norm(np.dot(self.lna[i],n))
+            if np.sum(n) != 1:
+                n = [1,0,0,0,0,0,0,0,0,0]
+            n = np.random.choice(10,1,p=n).astype(int) * 10**i
+            res += int(n)        
         return(res)
         
     def gen_g(self,g):
@@ -101,8 +114,10 @@ class Mkov:
         for y in np.arange(1,g.ly-1):
             for x in np.arange(1,g.lx-1):
                 i = y*g.lx + x
-                print(i)
+                #print(i)
                 res[i] = self.pred(res[i-1])
+                if res[i] > g.zmax:
+                    print(str(x) + " " + str(y) + " " + str(res[i]))
         return res
     
     def plo_d(self,g,h):
