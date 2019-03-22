@@ -85,13 +85,13 @@ class Mkov:
         self.zrng = lrange(g.zmax)
         self.lna = list()
         for i in np.arange(self.zrng +1):
-            self.lna.append(self.mat_t(np.mod((np.round(g.zval)/10**i),10).astype(int)))           
+            self.lna.append(self.mat_t(np.mod((np.round(g.zval/10**i)),10).astype(int)))           
         
     # Naive approach
     def mat_t(self,z):
         res = np.zeros([10,10])
         for (x,y), c in Counter(zip(z,z[1:])).items():            
-            res[x-1,y-1] = c
+            res[x,y] = c
         s = np.sum(res)
         return res/s
     
@@ -104,7 +104,7 @@ class Mkov:
             n = np.dot(self.lna[i],n)/norm(np.dot(self.lna[i],n))
             if np.sum(n) != 1:
                 n = [1,0,0,0,0,0,0,0,0,0]
-            n = np.random.choice(10,1,p=n).astype(int) * 10**i
+            n = np.random.choice(10,1,p=n).astype(int) * 10**i            
             res += int(n)        
         return(res)
         
@@ -114,10 +114,7 @@ class Mkov:
         for y in np.arange(1,g.ly-1):
             for x in np.arange(1,g.lx-1):
                 i = y*g.lx + x
-                #print(i)
-                res[i] = self.pred(res[i-1])
-                if res[i] > g.zmax:
-                    print(str(x) + " " + str(y) + " " + str(res[i]))
+                res[i] = self.pred(res[i-1])                
         return res
     
     def plo_d(self,g,h):
