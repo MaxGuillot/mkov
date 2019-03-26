@@ -38,6 +38,7 @@ def norm(v):
         return 1
 
 # End utilitary
+
 class Grille:
     
     def __init__(self,lx=10,ly=20,zmin=0,zmax=42,dx=1,dy=1):
@@ -77,7 +78,7 @@ class Grille:
         
     
         
-class Mkov:
+class nMkov: # Naive markov
     def __init__(self,g):
         g.bord() # Compute border indexes
         self.bval = np.mean(g.zval[g.ibord])
@@ -87,7 +88,6 @@ class Mkov:
         for i in np.arange(self.zrng +1):
             self.lna.append(self.mat_t(np.mod((np.round(g.zval/10**i)),10).astype(int)))           
         
-    # Naive approach
     def mat_t(self,z):
         res = np.zeros([10,10])
         for (x,y), c in Counter(zip(z,z[1:])).items():            
@@ -124,8 +124,127 @@ class Mkov:
         ax.plot_trisurf(g.xval,g.yval,h, antialiased=True,alpha=0.3)
         fig.show()
             
+class cMkov:
+    def __init__(self, g):
+        g.bord() # Compute border indexes
+        self.lx = g.lx
+        self.sp = g.sp
+        self.bval = np.mean(g.zval[g.ibord])
+        self.mval = np.mean(g.zval)
+        self.zrng = lrange(g.zmax)
+        self.lna = list()
+        for i in np.arange(self.zrng +1):
+            for d in np.arange(8):                
+                self.lna.append(self.mat_t(np.mod((np.round(g.zval/10**i)),10).astype(int),d))           
+
+    def pred(self,v = 142):
+        res = np.zeros(8)
+        for i in np.arange(self.zrng+1):
+            for d in np.arange(8):
+                i,d = int(i),int(d)
+                j = i+d
+                n = np.mod(np.round(v/100),10).astype(int)
+                n = evec(n)            
+                n = np.dot(self.lna[j],n)/norm(np.dot(self.lna[j],n))
+                if np.sum(n) != 1:
+                    n = [1,0,0,0,0,0,0,0,0,0]
+                n = np.random.choice(10,1,p=n).astype(int) * 10**i            
+                res[d] += int(n)                        
+        return np.mean(res)
+
+    def gen_g(self,g):
+        res = np.zeros(g.sp)
+        res[g.ebord] = g.zval[g.ebord]
+        for y in np.arange(1,g.ly-1):
+            for x in np.arange(1,g.lx-1):
+                i = y*g.lx + x
+                res[i] = self.pred(res[i-1])                
+        return res
+    
+    def plo_d(self,g,h):
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        ax.plot_trisurf(g.xval,g.yval,g.zval, antialiased=True)
+        ax.plot_trisurf(g.xval,g.yval,h, antialiased=True,alpha=0.3)
+        fig.show()
+    
+    def mat_t(self,z,d):
+        m_name = "mat_" + str(d)
+        mat = getattr(self,m_name)
+        return mat(z)
+        
+    def mat_0(self,z):
+        res = np.zeros([10,10])
+        for (x,y), c in Counter(zip(z,z[1:])).items():            
+            res[x,y] = c
+        s = np.sum(res)
+        return res/s
+
+    def mat_1(self,z):
+        lx = self.lx
+        sp = self.sp
+        res = np.zeros([10,10])
+        for (x,y), c in Counter(zip(z[sp::-1],z[sp-lx-1::-1])).items():            
+            res[x,y] = c
+        s = np.sum(res)
+        return res/s
+    
+    def mat_2(self,z):
+        lx = self.lx
+        sp = self.sp
+        res = np.zeros([10,10])
+        for (x,y), c in Counter(zip(z[sp::-1],z[sp-lx::-1])).items():            
+            res[x,y] = c
+        s = np.sum(res)
+        return res/s
+        
+    def mat_3(self,z):
+        lx = self.lx
+        sp = self.sp
+        res = np.zeros([10,10])
+        for (x,y), c in Counter(zip(z[sp::-1],z[sp-lx+1::-1])).items():            
+            res[x,y] = c
+        s = np.sum(res)
+        return res/s
+        
+    def mat_4(self,z):        
+        sp = self.sp
+        res = np.zeros([10,10])
+        for (x,y), c in Counter(zip(z[sp::-1],z[sp-1::-1])).items():            
+            res[x,y] = c
+        s = np.sum(res)
+        return res/s
+        
+    def mat_5(self,z):
+        lx = self.lx        
+        res = np.zeros([10,10])
+        for (x,y), c in Counter(zip(z,z[lx-1:])).items():            
+            res[x,y] = c
+        s = np.sum(res)
+        return res/s
+        
+    def mat_6(self,z):
+        lx = self.lx
+        res = np.zeros([10,10])
+        for (x,y), c in Counter(zip(z,z[lx:])).items():            
+            res[x,y] = c
+        s = np.sum(res)
+        return res/s
+        
+    def mat_7(self,z):
+        lx = self.lx
+        res = np.zeros([10,10])
+        for (x,y), c in Counter(zip(z,z[lx+1:])).items():            
+            res[x,y] = c
+        s = np.sum(res)
+        return res/s
+
 g = Grille()
 g.c_elev()
-m = Mkov(g)
+m = nMkov(g)
 h = m.gen_g(g)
 m.plo_d(g,h)
+
+c = cMkov(g)
+d = c.gen_g(g)
+c.plo_d(g,d)
