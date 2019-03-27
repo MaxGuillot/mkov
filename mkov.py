@@ -142,14 +142,22 @@ class cMkov:
         for i in np.arange(self.zrng+1):
             for d in np.arange(8):
                 i,d = int(i),int(d)
-                j = i+d
-                n = np.mod(np.round(v/100),10).astype(int)
-                n = evec(n)            
-                n = np.dot(self.lna[j],n)/norm(np.dot(self.lna[j],n))
-                if np.sum(n) != 1:
-                    n = [1,0,0,0,0,0,0,0,0,0]
-                n = np.random.choice(10,1,p=n).astype(int) * 10**i            
-                res[d] += int(n)                        
+                j = 8*i+d
+                a = np.mod(np.round(v/100),10).astype(int)
+                b = evec(a)            
+                c = np.dot(self.lna[j],b)/norm(np.dot(self.lna[j],b))
+                if np.sum(c) != 1:
+                    c = [1,0,0,0,0,0,0,0,0,0]
+                e = np.random.choice(10,1,p=c).astype(int) * 10**i            
+#                if e > 400 :
+#                    print("Boucle i="+str(i)+" d="+str(d))
+#                    print("Ceci est a :")
+#                    print(a)                    
+#                    print("Ceci est c :")
+#                    print(c)                    
+                res[d] += int(e)                
+        if np.mean(res) > 500:
+            print(res)                        
         return np.mean(res)
 
     def gen_g(self,g):
